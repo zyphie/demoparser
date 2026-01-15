@@ -149,6 +149,10 @@ impl<'a> FirstPassParser<'a> {
                 || ser.name.contains("Molo")
                 || ser.name.contains("Inc")
                 || ser.name.contains("Infer")
+                || ser.name.contains("Door")
+                || ser.name.contains("Breakable")
+                || ser.name.contains("Vent")
+                || ser.name.contains("Brush")
             {
                 // Assign id to each prop and other metadata things.
                 // When collecting values we use the id as key.

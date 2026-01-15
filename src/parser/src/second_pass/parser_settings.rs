@@ -71,6 +71,8 @@ pub struct SecondPassParser<'a> {
     pub parse_entities: bool,
     pub parse_projectiles: bool,
     pub parse_grenades: bool,
+    pub parse_dynamic_props: bool,
+    pub wanted_entity_classes: Vec<String>,
     pub is_debug_mode: bool,
     pub df_per_player: AHashMap<u64, AHashMap<u32, PropColumn>>,
     pub order_by_steamid: bool,
@@ -210,6 +212,8 @@ impl<'a> SecondPassParser<'a> {
             game_events_counter: AHashSet::default(),
             parse_projectiles: first_pass_output.settings.parse_projectiles,
             parse_grenades: first_pass_output.settings.parse_grenades,
+            parse_dynamic_props: first_pass_output.settings.parse_dynamic_props,
+            wanted_entity_classes: first_pass_output.settings.wanted_entity_classes.clone(),
             rules_entity_id: None,
             convars: AHashMap::default(),
             chat_messages: vec![],
@@ -282,6 +286,8 @@ pub struct SpecialIDs {
 
     pub is_airborn: Option<u32>,
     pub initial_velocity: Option<u32>,
+    pub health: Option<u32>,
+    pub m_ang_rotation_generic: Option<u32>,
 }
 impl SpecialIDs {
     pub fn new() -> Self {
@@ -331,6 +337,8 @@ impl SpecialIDs {
             custom_name: None,
             is_airborn: None,
             initial_velocity: None,
+            health: None,
+            m_ang_rotation_generic: None,
         }
     }
 }

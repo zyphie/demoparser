@@ -376,13 +376,14 @@ impl<'a> SecondPassParser<'a> {
 }
 
 fn should_emit_prop_to_listen(prop_name: &str) -> bool {
-    match prop_name.split(".").next() {
-        Some("CCSGameRulesProxy") => return true,
-        Some("CCSTeam") => return true,
-        Some("CCSPlayerPawn") => return true,
-        Some("CCSPlayerController") => return true,
+    let first_part = prop_name.split(".").next().unwrap_or("");
+    match first_part {
+        "CCSGameRulesProxy" | "CCSTeam" | "CCSPlayerPawn" | "CCSPlayerController" => return true,
         _ => {}
     };
+    if first_part.contains("Door") || first_part.contains("Breakable") || first_part.contains("Vent") || first_part.contains("Brush") {
+        return true;
+    }
     if is_weapon_prop(prop_name) || is_grenade_prop(prop_name) {
         return true;
     }

@@ -40,6 +40,8 @@ pub struct ParserInputs<'a> {
     pub order_by_steamid: bool,
     pub list_props: bool,
     pub fallback_bytes: Option<Vec<u8>>,
+    pub parse_dynamic_props: bool,
+    pub wanted_entity_classes: Vec<String>,
 }
 
 pub struct FirstPassParser<'a> {
@@ -72,6 +74,8 @@ pub struct FirstPassParser<'a> {
     pub parse_entities: bool,
     pub parse_projectiles: bool,
     pub parse_grenades: bool,
+    pub parse_dynamic_props: bool,
+    pub wanted_entity_classes: Vec<String>,
     pub name_to_id: AHashMap<String, u32>,
     pub id: u32,
     pub wanted_prop_ids: Vec<u32>,
@@ -138,6 +142,8 @@ impl<'a> FirstPassParser<'a> {
             serializers: AHashMap::default(),
             parse_projectiles: inputs.parse_projectiles,
             parse_grenades: inputs.parse_grenades,
+            parse_dynamic_props: inputs.parse_dynamic_props,
+            wanted_entity_classes: inputs.wanted_entity_classes.clone(),
             wanted_player_props: inputs.wanted_player_props.clone(),
             wanted_events: inputs.wanted_events.clone(),
             wanted_players: AHashSet::from_iter(inputs.wanted_players.iter().cloned()),

@@ -67,6 +67,10 @@ impl<'a> SecondPassParser<'a> {
             self.collect_projectiles();
             return;
         }
+        if self.parse_dynamic_props {
+            self.collect_dynamic_props();
+            return;
+        }
         // iterate every player and every wanted prop name
         // if either one is missing then push None to output
         for (entity_id, player) in &self.players {
@@ -114,6 +118,59 @@ impl<'a> SecondPassParser<'a> {
                             // Ultimate debugger is to print this error
                             self.output.entry(prop_info.id).or_insert_with(|| PropColumn::new()).push(None);
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn collect_dynamic_props(&mut self) {
+        let dummy_player = PlayerMetaData {
+            name: None,
+            team_num: None,
+            player_entity_id: None,
+            steamid: None,
+            controller_entid: None,
+        };
+
+        for (entity_id, entity_option) in self.entities.iter().enumerate() {
+            if let Some(entity) = entity_option {
+                // Filter by class name
+                let mut is_target = false;
+                if let Some(cls) = self.cls_by_id.get(entity.cls_id as usize) {
+                    let cls_name = &cls.name;
+                    if self.wanted_entity_classes.contains(cls_name) || (self.wanted_entity_classes.len() == 1 && self.wanted_entity_classes[0] == "all") {
+                        is_target = true;
+                    }
+                }
+                
+                if !is_target { continue; }
+
+                let entid_i32 = entity_id as i32;
+                let mut has_any = false;
+                for prop_info in &self.prop_controller.prop_infos {
+                     if prop_info.id == TICK_ID || prop_info.id == ENTITY_ID_ID { continue; }
+                     if self.find_prop(prop_info, &entid_i32, &dummy_player).is_ok() {
+                         has_any = true;
+                         break;
+                     }
+                }
+                
+                if has_any {
+                    self.output.entry(TICK_ID).or_insert_with(|| PropColumn::new()).push(Some(Variant::I32(self.tick)));
+                    self.output.entry(ENTITY_ID_ID).or_insert_with(|| PropColumn::new()).push(Some(Variant::I32(entid_i32)));
+                    
+                    if let Some(cls) = self.cls_by_id.get(entity.cls_id as usize) {
+                        self.output.entry(CLASS_NAME_ID).or_insert_with(|| PropColumn::new()).push(Some(Variant::String(cls.name.clone())));
+                    } else {
+                        self.output.entry(CLASS_NAME_ID).or_insert_with(|| PropColumn::new()).push(None);
+                    }
+                    
+                    for prop_info in &self.prop_controller.prop_infos {
+                        if prop_info.id == TICK_ID || prop_info.id == ENTITY_ID_ID { continue; }
+                        
+                        let val = self.find_prop(prop_info, &entid_i32, &dummy_player).ok();
+                        self.output.entry(prop_info.id).or_insert_with(|| PropColumn::new()).push(val);
                     }
                 }
             }
@@ -405,26 +462,51 @@ impl<'a> SecondPassParser<'a> {
         Ok(Variant::F32(coordinate?))
     }
     fn find_pitch_or_yaw(&self, entity_id: &i32, idx: usize) -> Result<Variant, PropCollectionError> {
-        match self.prop_controller.special_ids.eye_angles {
-            Some(prop_id) => match self.get_prop_from_ent(&prop_id, entity_id) {
-                Ok(Variant::VecXYZ(v)) => return Ok(Variant::F32(v[idx])),
-                Ok(_) => return Err(PropCollectionError::EyeAnglesWrongVariant),
-                Err(e) => return Err(e),
-            },
-            None => Err(PropCollectionError::SpecialidsEyeAnglesNotSet),
+        if let Some(prop_id) = self.prop_controller.special_ids.eye_angles {
+            if let Ok(Variant::VecXYZ(v)) = self.get_prop_from_ent(&prop_id, entity_id) {
+                return Ok(Variant::F32(v[idx]));
+            }
+        }
+        if let Some(prop_id) = self.prop_controller.special_ids.m_ang_rotation_generic {
+            if let Ok(Variant::VecXYZ(v)) = self.get_prop_from_ent(&prop_id, entity_id) {
+                return Ok(Variant::F32(v[idx]));
+            }
+        }
+        Err(PropCollectionError::SpecialidsEyeAnglesNotSet)
+    }
+    fn find_health(&self, entity_id: &i32) -> Result<Variant, PropCollectionError> {
+        match self.prop_controller.special_ids.health {
+            Some(prop_id) => self.get_prop_from_ent(&prop_id, entity_id),
+            None => Err(PropCollectionError::SpecialidsHealthNotSet),
         }
     }
     pub fn create_custom_prop(&self, prop_name: &str, entity_id: &i32, prop_info: &PropInfo, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
         match prop_name {
-            "X" => self.collect_cell_coordinate_player(CoordinateAxis::X, entity_id),
-            "Y" => self.collect_cell_coordinate_player(CoordinateAxis::Y, entity_id),
-            "Z" => self.collect_cell_coordinate_player(CoordinateAxis::Z, entity_id),
+            "X" => {
+                if let Ok(v) = self.collect_cell_coordinate_player(CoordinateAxis::X, entity_id) {
+                    return Ok(v);
+                }
+                return self.collect_cell_coordinate_grenade(CoordinateAxis::X, entity_id);
+            }
+            "Y" => {
+                if let Ok(v) = self.collect_cell_coordinate_player(CoordinateAxis::Y, entity_id) {
+                    return Ok(v);
+                }
+                return self.collect_cell_coordinate_grenade(CoordinateAxis::Y, entity_id);
+            }
+            "Z" => {
+                if let Ok(v) = self.collect_cell_coordinate_player(CoordinateAxis::Z, entity_id) {
+                    return Ok(v);
+                }
+                return self.collect_cell_coordinate_grenade(CoordinateAxis::Z, entity_id);
+            }
             "velocity" => self.collect_velocity(player),
             "velocity_X" => self.collect_velocity_axis(player, CoordinateAxis::X),
             "velocity_Y" => self.collect_velocity_axis(player, CoordinateAxis::Y),
             "velocity_Z" => self.collect_velocity_axis(player, CoordinateAxis::Z),
             "pitch" => self.find_pitch_or_yaw(entity_id, 0),
             "yaw" => self.find_pitch_or_yaw(entity_id, 1),
+            "health" => self.find_health(entity_id),
             "weapon_name" => self.find_weapon_name(entity_id),
             "weapon_skin" => self.find_weapon_skin_from_player(entity_id),
             "weapon_skin_id" => self.find_weapon_skin_id_from_player(entity_id),
@@ -1192,6 +1274,7 @@ pub enum PropCollectionError {
     RulesEntityIdNotSet,
     ControllerEntityIdNotSet,
     SpecialidsEyeAnglesNotSet,
+    SpecialidsHealthNotSet,
     SpecialidsItemDefNotSet,
     EyeAnglesWrongVariant,
     WeaponIdxMappingNotFound,

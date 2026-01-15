@@ -37,6 +37,8 @@ pub const PLAYER_X_ID: u32 = 100000016;
 pub const PLAYER_Y_ID: u32 = 100000017;
 pub const PLAYER_Z_ID: u32 = 100000018;
 pub const WEAPON_STICKERS_ID: u32 = 100000019;
+pub const HEALTH_ID: u32 = 100000020;
+pub const CLASS_NAME_ID: u32 = 100000021;
 
 pub const WEAPON_SKIN_ID: u32 = 10000000;
 pub const WEAPON_PAINT_SEED: u32 = 10000001;
@@ -501,6 +503,9 @@ impl PropController {
                 "CBodyComponentBaseAnimGraph.m_cellX" => self.special_ids.m_cell_x_grenade = Some(id),
                 "CBodyComponentBaseAnimGraph.m_cellY" => self.special_ids.m_cell_y_grenade = Some(id),
                 "CBodyComponentBaseAnimGraph.m_cellZ" => self.special_ids.m_cell_z_grenade = Some(id),
+                "CBodyComponentBaseAnimGraph.m_angRotation" => self.special_ids.m_ang_rotation_generic = Some(id),
+                "CBodyComponentBaseModelEntity.m_angRotation" => self.special_ids.m_ang_rotation_generic = Some(id),
+                "m_iHealth" => self.special_ids.health = Some(id),
                 "m_iItemDefinitionIndex" => self.special_ids.item_def = Some(id),
                 "m_OriginalOwnerXuidLow" => self.special_ids.orig_own_low = Some(id),
                 "m_OriginalOwnerXuidHigh" => self.special_ids.orig_own_high = Some(id),
@@ -531,6 +536,7 @@ impl PropController {
                 "CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecZ" => self.special_ids.cell_z_offset_player = Some(id),
                 "CCSPlayerPawn.CCSPlayer_WeaponServices.m_hActiveWeapon" => self.special_ids.active_weapon = Some(id),
                 "CCSPlayerPawn.m_lifeState" => self.special_ids.life_state = Some(id),
+                "CCSPlayerPawn.m_iHealth" => self.special_ids.health = Some(id),
                 "CCSPlayerController.m_nPawnCharacterDefIndex" => self.special_ids.agent_skin_idx = Some(id),
                 "CCSPlayerPawn.m_bInBuyZone" => self.special_ids.in_buy_zone = Some(id),
                 "CCSPlayerPawn.m_hGroundEntity" => self.special_ids.is_airborn = Some(id),
@@ -607,7 +613,13 @@ pub fn is_grenade_or_weapon(full_name: &str) -> bool {
         || split_at_dot[0].contains("Inc")
         || split_at_dot[0].contains("Infer");
 
-    let is_projectile_prop = (split_at_dot[0].contains("Projectile") || split_at_dot[0].contains("Grenade") || split_at_dot[0].contains("Flash"))
+    let is_projectile_prop = (split_at_dot[0].contains("Projectile")
+        || split_at_dot[0].contains("Grenade")
+        || split_at_dot[0].contains("Flash")
+        || split_at_dot[0].contains("Door")
+        || split_at_dot[0].contains("Breakable")
+        || split_at_dot[0].contains("Vent")
+        || split_at_dot[0].contains("Brush"))
         && !split_at_dot[0].contains("Player");
     is_weapon_prop || is_projectile_prop
 }
